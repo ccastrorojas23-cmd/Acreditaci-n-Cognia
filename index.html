@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico Cognia — Autoevaluación Institucional</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #1e2530; --border: #2a3342;
+    --text: #e6edf3; --muted: #7d8590;
+    --nivel1: #ff4d4d; --nivel2: #f59e0b; --nivel3: #3b82f6; --nivel4: #22c55e;
+    --ni: #ef4444; --s: #22c55e;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+  header { padding:48px 64px 32px; border-bottom:1px solid var(--border); position:relative; overflow:hidden; }
+  header::before { content:''; position:absolute; top:-60px; left:-60px; width:300px; height:300px; background:radial-gradient(circle,rgba(139,92,246,0.15) 0%,transparent 70%); pointer-events:none; }
+  .badge { display:inline-block; font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:#8b5cf6; border:1px solid rgba(139,92,246,0.4); padding:4px 12px; border-radius:20px; margin-bottom:16px; }
+  h1 { font-family:'Playfair Display',serif; font-size:clamp(26px,4vw,44px); font-weight:900; line-height:1.1; margin-bottom:10px; background:linear-gradient(135deg,#e6edf3 0%,#8b9bb4 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .subtitle { color:var(--muted); font-size:13px; font-weight:300; }
+
+  .summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; padding:24px 64px; border-bottom:1px solid var(--border); }
+  .summary-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center; }
+  .summary-card .num { font-family:'Playfair Display',serif; font-size:32px; font-weight:700; line-height:1; margin-bottom:4px; }
+  .summary-card .lbl { font-size:10px; color:var(--muted); font-weight:500; letter-spacing:0.5px; }
+
+  .legend { display:flex; gap:18px; flex-wrap:wrap; padding:12px 64px; border-bottom:1px solid var(--border); }
+  .legend-item { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--muted); }
+  .legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+
+  .overview-section { padding:28px 64px 8px; }
+  .section-title { font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:16px; }
+  .heatmap-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .heatmap-cat { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .heatmap-cat-name { font-size:9px; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+  .heatmap-dots { display:flex; flex-wrap:wrap; gap:6px; }
+  .heatmap-dot { width:32px; height:32px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; font-family:'Playfair Display',serif; cursor:pointer; transition:transform 0.15s,box-shadow 0.15s; }
+  .heatmap-dot:hover { transform:scale(1.18); box-shadow:0 4px 16px rgba(0,0,0,0.45); }
+  .heatmap-dot[data-nivel="1"] { background:rgba(255,77,77,0.2); color:var(--nivel1); border:1px solid rgba(255,77,77,0.35); }
+  .heatmap-dot[data-nivel="2"] { background:rgba(245,158,11,0.2); color:var(--nivel2); border:1px solid rgba(245,158,11,0.35); }
+  .heatmap-dot[data-nivel="3"] { background:rgba(59,130,246,0.2); color:var(--nivel3); border:1px solid rgba(59,130,246,0.35); }
+  .heatmap-dot[data-nivel="4"] { background:rgba(34,197,94,0.2); color:var(--nivel4); border:1px solid rgba(34,197,94,0.35); }
+  .heatmap-dot[data-nivel="nd"] { background:rgba(125,133,144,0.1); color:var(--muted); border:1px solid var(--border); cursor:default; }
+  .cat-avg-bar { margin-top:12px; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+  .cat-avg-fill { height:100%; border-radius:2px; transition:width 1.2s ease; width:0; }
+  .cat-avg-label { margin-top:5px; font-size:10px; color:var(--muted); }
+
+  .categories { padding:32px 64px; display:flex; flex-direction:column; gap:44px; }
+  .category-block { animation:fadeUp 0.5s ease both; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  .cat-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  .cat-stripe { width:8px; height:26px; border-radius:3px; flex-shrink:0; }
+  .cat-title { font-family:'Playfair Display',serif; font-size:19px; font-weight:700; }
+  .cat-meta { margin-left:auto; font-size:10px; color:var(--muted); background:var(--surface); border:1px solid var(--border); padding:3px 10px; border-radius:20px; }
+
+  .standards-list { display:flex; flex-direction:column; gap:6px; }
+
+  .standard-row {
+    display:grid; grid-template-columns:40px 1fr 190px 42px 44px;
+    align-items:center; gap:12px;
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:12px 16px; cursor:pointer;
+    transition:border-color 0.2s,background 0.2s,box-shadow 0.2s;
+  }
+  .standard-row:hover { border-color:#3a4a60; background:var(--surface2); box-shadow:0 2px 10px rgba(0,0,0,0.2); }
+  .standard-row.active { border-color:#3b82f6 !important; background:#0a1520 !important; }
+
+  .std-num { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; text-align:center; }
+  .std-label { font-size:12px; color:var(--text); line-height:1.45; }
+  .hint { font-size:9px; color:var(--muted); margin-top:3px; display:flex; align-items:center; gap:3px; }
+
+  .bar-wrap { display:flex; flex-direction:column; gap:4px; }
+  .bar-track { height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:3px; transition:width 1s cubic-bezier(0.4,0,0.2,1); width:0; }
+  .bar-nums { display:flex; justify-content:space-between; }
+  .bar-n { font-size:9px; font-weight:600; }
+
+  .nivel-val { font-family:'Playfair Display',serif; font-size:19px; font-weight:700; text-align:center; }
+  .status-pill { font-size:9px; font-weight:600; letter-spacing:1px; padding:3px 7px; border-radius:5px; text-align:center; }
+  .pill-ni { background:rgba(239,68,68,0.15); color:var(--ni); border:1px solid rgba(239,68,68,0.25); }
+  .pill-s  { background:rgba(34,197,94,0.15); color:var(--s); border:1px solid rgba(34,197,94,0.25); }
+  .pill-nd { background:rgba(125,133,144,0.1); color:var(--muted); border:1px solid var(--border); }
+
+  /* DETAIL PANEL */
+  .detail-panel { max-height:0; overflow:hidden; transition:max-height 0.45s cubic-bezier(0.4,0,0.2,1),opacity 0.3s ease; opacity:0; }
+  .detail-panel.open { max-height:700px; opacity:1; }
+  .detail-inner {
+    margin-top:4px; background:#071320; border:1px solid #1a3a5c;
+    border-radius:10px; padding:22px 26px;
+    display:grid; grid-template-columns:1fr auto; gap:24px; align-items:start;
+  }
+  .detail-lbl { font-size:9px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+  .detail-estandar { font-size:12.5px; color:#93c5fd; font-style:italic; line-height:1.55; margin-bottom:16px; border-left:2px solid #1e3a5f; padding-left:12px; }
+  .detail-descriptor { font-size:13px; color:var(--text); line-height:1.75; }
+  .detail-badge-big { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:96px; background:rgba(0,0,0,0.35); border-radius:12px; padding:18px 14px; border:1px solid var(--border); }
+  .detail-nivel-num { font-family:'Playfair Display',serif; font-size:48px; font-weight:900; line-height:1; }
+  .detail-nivel-txt { font-size:9px; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-top:6px; text-align:center; line-height:1.4; }
+  .detail-status-big { margin-top:12px; font-size:10px; font-weight:700; letter-spacing:1px; padding:5px 10px; border-radius:6px; }
+
+  footer { padding:24px 64px; border-top:1px solid var(--border); text-align:center; color:var(--muted); font-size:11px; }
+
+  /* LOGIN */
+  #login-screen {
+    position:fixed; inset:0; z-index:1000;
+    background:var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    animation:fadeIn 0.4s ease;
+  }
+  #login-screen.hidden { display:none; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  .login-box {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:48px 44px;
+    width:100%;
+    max-width:420px;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 24px 64px rgba(0,0,0,0.6);
+  }
+  .login-box::before {
+    content:'';
+    position:absolute; top:-80px; right:-60px;
+    width:220px; height:220px;
+    background:radial-gradient(circle,rgba(139,92,246,0.18) 0%,transparent 70%);
+    pointer-events:none;
+  }
+  .login-box::after {
+    content:'';
+    position:absolute; bottom:-60px; left:-40px;
+    width:180px; height:180px;
+    background:radial-gradient(circle,rgba(6,182,212,0.12) 0%,transparent 70%);
+    pointer-events:none;
+  }
+  .login-logo {
+    font-family:'Playfair Display',serif;
+    font-size:13px; font-weight:700; letter-spacing:3px;
+    text-transform:uppercase; color:#8b5cf6;
+    margin-bottom:32px; display:block;
+  }
+  .login-title {
+    font-family:'Playfair Display',serif;
+    font-size:26px; font-weight:900; line-height:1.2;
+    background:linear-gradient(135deg,#e6edf3 0%,#8b9bb4 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    margin-bottom:8px;
+  }
+  .login-sub { color:var(--muted); font-size:13px; margin-bottom:36px; }
+
+  .login-field { margin-bottom:18px; }
+  .login-field label { display:block; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .login-field input {
+    width:100%; background:#0d1117; border:1px solid var(--border);
+    border-radius:9px; padding:13px 16px; color:var(--text);
+    font-family:'DM Sans',sans-serif; font-size:14px;
+    outline:none; transition:border-color 0.2s, box-shadow 0.2s;
+  }
+  .login-field input:focus { border-color:#8b5cf6; box-shadow:0 0 0 3px rgba(139,92,246,0.15); }
+
+  .login-btn {
+    width:100%; margin-top:8px;
+    background:linear-gradient(135deg,#8b5cf6,#6d28d9);
+    border:none; border-radius:9px; padding:14px;
+    color:#fff; font-family:'DM Sans',sans-serif;
+    font-size:14px; font-weight:600; letter-spacing:0.5px;
+    cursor:pointer; transition:opacity 0.2s, transform 0.15s;
+  }
+  .login-btn:hover { opacity:0.9; transform:translateY(-1px); }
+  .login-btn:active { transform:translateY(0); }
+
+  .login-error {
+    margin-top:14px; padding:10px 14px;
+    background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.25);
+    border-radius:8px; color:#f87171; font-size:12px; text-align:center;
+    display:none;
+  }
+  .login-error.show { display:block; animation:shake 0.35s ease; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-6px)}
+    75%{transform:translateX(6px)}
+  }
+
+  #main-content { display:none; }
+  #main-content.visible { display:block; }
+
+  @media(max-width:860px){
+    header,.summary-grid,.legend,.categories,.overview-section{ padding-left:20px; padding-right:20px; }
+    .standard-row{ grid-template-columns:34px 1fr; }
+    .bar-wrap,.nivel-val,.status-pill{ display:none; }
+    .heatmap-grid{ grid-template-columns:1fr 1fr; }
+    .detail-inner{ grid-template-columns:1fr; }
+    .detail-badge-big{ flex-direction:row; gap:12px; min-width:unset; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <span class="login-logo">Cognia &middot; Acreditación</span>
+    <div class="login-title">Acceso al Diagnóstico</div>
+    <p class="login-sub">Ingresa tus credenciales para consultar los resultados de autoevaluación institucional.</p>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="login-user" placeholder="Usuario" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="login-error">Usuario o contraseña incorrectos. Verifica e intenta de nuevo.</div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="main-content">
+
+<header>
+  <div class="badge">Proceso de Acreditación Cognia</div>
+  <h1>Diagnóstico de Autoevaluación Institucional</h1>
+  <p class="subtitle">Haz clic en cualquier estándar para desplegar el descriptor completo del nivel alcanzado por el colegio.</p>
+</header>
+
+<div class="summary-grid">
+  <div class="summary-card"><div class="num">27</div><div class="lbl">Estándares evaluados</div></div>
+  <div class="summary-card"><div class="num" style="color:var(--ni)">23</div><div class="lbl">No Satisfactorios (NI)</div></div>
+  <div class="summary-card"><div class="num" style="color:var(--s)">4</div><div class="lbl">Satisfactorios (S)</div></div>
+  <div class="summary-card"><div class="num" style="color:var(--nivel3)">2.3</div><div class="lbl">Promedio general / 4</div></div>
+  <div class="summary-card"><div class="num" style="color:var(--nivel1)">1</div><div class="lbl">En Nivel 1 — Inicial</div></div>
+  <div class="summary-card"><div class="num" style="color:var(--nivel2)">17</div><div class="lbl">En Nivel 2 — En desarrollo</div></div>
+  <div class="summary-card"><div class="num" style="color:var(--nivel3)">7</div><div class="lbl">En Nivel 3 — Proficiente</div></div>
+  <div class="summary-card"><div class="num" style="color:var(--nivel4)">2</div><div class="lbl">En Nivel 4 — Distinguido</div></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--nivel1)"></div>Nivel 1 – Inicial</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--nivel2)"></div>Nivel 2 – En desarrollo</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--nivel3)"></div>Nivel 3 – Proficiente</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--nivel4)"></div>Nivel 4 – Distinguido</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--s)"></div>S – Satisfactorio</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--ni)"></div>NI – No satisfactorio</div>
+</div>
+
+<div class="overview-section">
+  <div class="section-title">Vista general — clic en cada número para ir al descriptor</div>
+  <div class="heatmap-grid" id="heatmap"></div>
+</div>
+
+<div class="categories" id="categories"></div>
+
+<footer>Diagnóstico Cognia · Coordinación Académica de Tecnología · Febrero 2026</footer>
+
+<script>
+const nivelColor = {1:'#ff4d4d',2:'#f59e0b',3:'#3b82f6',4:'#22c55e'};
+const nivelLabel = {1:'Inicial',2:'En desarrollo',3:'Proficiente',4:'Distinguido'};
+
+const DATA = {
+  "CULTURA DEL APRENDIZAJE":{color:"#8b5cf6",standards:[
+    {num:1,nivel:2,status:"NI",estandar:"Los líderes cultivan y mantienen una cultura que demuestra respeto y equidad hacia todos los estudiantes y está libre de prejuicios.",descriptor:"En ocasiones, los líderes modelan los atributos e implementan prácticas que moldean y sustentan la cultura institucional deseada, estableciendo claramente las expectativas para todo el personal. Los líderes y el personal profesional a veces implementan prácticas, procesos y procesos de toma de decisiones continuos que encarnan los valores de respeto y equidad para todos los estudiantes y están libres de sesgos."},
+    {num:2,nivel:3,status:"NI",estandar:"El bienestar de los estudiantes está en el centro de los principios rectores de la institución, como la misión, el propósito y las creencias.",descriptor:"El personal demuestra constantemente su compromiso con las necesidades e intereses académicos y no académicos de los estudiantes. Las prácticas, procesos y decisiones de la institución están documentados y se basan en sus valores declarados."},
+    {num:3,nivel:2,status:"NI",estandar:"Los líderes involucran activamente a las partes interesadas para apoyar las prioridades de la institución y los principios rectores que promueven el crecimiento académico y el bienestar de los estudiantes.",descriptor:"Los líderes establecen condiciones que, en ocasiones, resultan en el apoyo y la participación de las partes interesadas. En ocasiones, colaboran con ellas para impulsar las prioridades identificadas. Las instituciones eligen áreas de enfoque que, en ocasiones, se basan en datos sobre las necesidades de los estudiantes y son coherentes con los principios rectores."},
+    {num:4,nivel:3,status:"NI",estandar:"Los estudiantes se benefician de una estructura formal que fomenta relaciones positivas con sus compañeros y adultos.",descriptor:"Se planifica e implementa periódicamente una estructura formal para promover una cultura y un clima en el que los estudiantes reciben apoyo de adultos y compañeros. Las interacciones y comportamientos entre compañeros y adultos demuestran habitualmente respeto, confianza y preocupación por el bienestar mutuo."},
+    {num:5,nivel:2,status:"NI",estandar:"Los miembros del personal profesional adoptan una colegialidad y colaboración efectivas en apoyo de los estudiantes.",descriptor:"Las prácticas operativas de la institución fomentan y establecen expectativas de compañerismo y colaboración. El personal profesional generalmente interactúa con respeto y cooperación, aprende periódicamente unos de otros y, en cierta medida, considera las ideas de los demás. En ocasiones, colabora en grupos autoformados o asignados para revisar información, identificar problemas comunes e implementar soluciones en beneficio de los estudiantes."},
+    {num:6,nivel:2,status:"NI",estandar:"El personal profesional recibe el apoyo que necesita para fortalecer su práctica profesional.",descriptor:"El personal profesional recibe recursos y asistencia basados en datos e información específicos de cada individuo. Recibe mentoría y coaching periódico de líderes y compañeros."},
+  ]},
+  "LIDERAZGO PARA EL APRENDIZAJE":{color:"#06b6d4",standards:[
+    {num:7,nivel:3,status:"NI",estandar:"Los líderes guían al personal profesional en el proceso de mejora continua centrado en las experiencias y necesidades de los estudiantes.",descriptor:"Los líderes involucran regularmente al personal profesional en el desarrollo, la comunicación, la implementación, la supervisión y el ajuste del proceso de mejora continua. Este proceso se basa en datos analizados sobre las necesidades académicas y no académicas de los estudiantes, así como sobre la eficacia organizativa de la institución. Los líderes y el personal profesional implementan rutinariamente prácticas, procesos y toma de decisiones continuas que mejoran el aprendizaje e involucran a las partes interesadas."},
+    {num:8,nivel:3,status:"NI",estandar:"La autoridad rectora demuestra un compromiso con los estudiantes al colaborar con los líderes para defender las prioridades de la institución e impulsar la mejora continua.",descriptor:"Las políticas y decisiones de la autoridad rectora demuestran un compromiso con los estudiantes y respaldan las prioridades de la institución. La autoridad rectora y los líderes institucionales ejercen sus respectivas funciones y responsabilidades para impulsar conjuntamente la mejora de la institución."},
+    {num:9,nivel:4,status:"S",estandar:"Los líderes cultivan un liderazgo individual y colectivo eficaz entre las partes interesadas.",descriptor:"Los líderes reconocen constantemente y fomentan activamente el potencial de liderazgo de las partes interesadas. Crean condiciones que garantizan oportunidades de liderazgo formales e informales y brindan apoyo personalizado a individuos y grupos para que mejoren sus habilidades de liderazgo. Las partes interesadas muestran iniciativa y entusiasmo para asumir responsabilidades individuales o compartidas que apoyan las prioridades de la institución."},
+    {num:10,nivel:2,status:"NI",estandar:"Los líderes demuestran experiencia en el reclutamiento, supervisión y evaluación de personal profesional para optimizar el aprendizaje.",descriptor:"Los líderes contratan personal profesional cualificado que contribuye al propósito y las prioridades de la institución. En ocasiones, utilizan datos para prever las necesidades futuras de personal. Supervisan y evalúan al personal profesional para mejorar su desempeño."},
+    {num:11,nivel:3,status:"S",estandar:"Los líderes crean y mantienen estructuras y procesos institucionales que apoyan a los estudiantes y al personal en entornos estables y cambiantes.",descriptor:"Los líderes demuestran regularmente ser conscientes de las posibles influencias en la estabilidad institucional e involucran a las partes interesadas en la planificación e implementación de estrategias para mantener la estabilidad y responder al cambio. La estructura y los procesos de la institución se documentan y comunican para que los estudiantes y el personal sepan qué hacer y qué esperar en situaciones cotidianas. La estructura y los procesos de la institución incluyen planes de emergencia y contingencia que facilitan la respuesta a cambios tanto graduales como repentinos."},
+    {num:12,nivel:3,status:"NI",estandar:"Los miembros del personal profesional implementan planes de estudio e instrucción alineados para lograr relevancia y eficacia para todos y cada uno de los alumnos.",descriptor:"El personal profesional implementa, revisa y ajusta el currículo y la instrucción con base en estándares de contenido reconocidos y basados en la evidencia. El currículo y las prácticas educativas se evalúan periódicamente para garantizar su coherencia, pertinencia y eficacia para cada estudiante."},
+    {num:13,nivel:2,status:"NI",estandar:"Personal calificado instruye y ayuda a los estudiantes y a los demás en apoyo de la misión, el propósito y las creencias de la institución.",descriptor:"La mayoría del personal demuestra los conocimientos y las habilidades necesarios para sus puestos, y se está implementando un plan para garantizar que todos estén cualificados. En ocasiones, el personal colabora para instruir y ayudar a los estudiantes y colegas, en apoyo de los principios rectores de la institución."},
+    {num:14,nivel:4,status:"S",estandar:"El currículo y la instrucción se complementan con recursos de información y materiales confiables que promueven el aprendizaje y apoyan los intereses personales de los estudiantes.",descriptor:"El personal profesional sugiere y proporciona constantemente recursos y materiales de información cuidadosamente seleccionados para los estudiantes, que amplían y enriquecen el proceso de aprendizaje y apoyan sus intereses personales. Se utiliza un proceso sistemático para identificar y verificar que los recursos y materiales de información provengan de fuentes fiables."},
+    {num:15,nivel:2,status:"S",estandar:"Las necesidades de los estudiantes impulsan la asignación y gestión de recursos humanos, materiales, digitales y fiscales.",descriptor:"El personal profesional a veces analiza las necesidades de los estudiantes, así como los datos actuales y de tendencias, para ajustar la asignación y gestión de recursos humanos, materiales, digitales y financieros y garantizar que se satisfagan las necesidades de cada estudiante. Los ajustes en la asignación de recursos a veces se basan en datos actuales o actualizados."},
+  ]},
+  "COMPROMISO CON EL APRENDIZAJE":{color:"#f97316",standards:[
+    {num:16,nivel:2,status:"NI",estandar:"Los estudiantes experimentan un currículo y una instrucción que enfatizan el valor de diferentes culturas, orígenes y habilidades que reflejan la comunidad global.",descriptor:"El respeto por las diferentes culturas, orígenes y capacidades está presente en la cultura y los entornos de aprendizaje de la institución. La presencia y las contribuciones de la comunidad global se incluyen de forma inconsistente en el contenido curricular y las prácticas docentes."},
+    {num:17,nivel:2,status:"NI",estandar:"Los estudiantes tienen el apoyo y las oportunidades para desarrollar su potencial de aprendizaje.",descriptor:"El personal profesional considera las diferentes necesidades y el bienestar de los estudiantes al desarrollar y ofrecer experiencias académicas y no académicas. Los estudiantes tienen acceso a una variedad de oportunidades, pero pueden encontrar obstáculos para acceder a aquellas que mejor se adapten a sus necesidades individuales. En ocasiones, se les anima y apoya para que se esfuercen por alcanzar sus logros individuales y su autoeficacia."},
+    {num:18,nivel:3,status:"NI",estandar:"Los estudiantes están inmersos en un entorno que fomenta habilidades para toda la vida, incluida la creatividad, la curiosidad, la toma de riesgos, la colaboración y el pensamiento de diseño.",descriptor:"Las condiciones en la mayoría de los aspectos de la institución promueven las habilidades para toda la vida de los estudiantes. Los estudiantes participan en experiencias que desarrollan las habilidades no académicas importantes para sus próximos pasos en el aprendizaje y para el éxito futuro. En conjunto, las experiencias de aprendizaje desarrollan habilidades de creatividad, curiosidad, toma de riesgos, colaboración y pensamiento de diseño."},
+    {num:19,nivel:2,status:"NI",estandar:"Los estudiantes están inmersos en un entorno que promueve y respeta la autonomía y la responsabilidad de los estudiantes respecto de su aprendizaje.",descriptor:"Las condiciones en algunos aspectos de la institución se centran en el alumno y promueven el descubrimiento y la expresión activa de sus necesidades e intereses. Los alumnos tienen la oportunidad de participar en las actividades de enseñanza y aprendizaje disponibles. En ocasiones, participan en la identificación de sus objetivos de aprendizaje y el seguimiento de su progreso."},
+    {num:20,nivel:2,status:"NI",estandar:"Los estudiantes participan en experiencias que promueven y desarrollan su confianza en sí mismos y su amor por el aprendizaje.",descriptor:"Algunos estudiantes buscan oportunidades que no siempre resultan en éxito, pero solo con un apoyo individual significativo. Otros estudiantes muestran motivación, curiosidad y entusiasmo por su aprendizaje."},
+    {num:21,nivel:2,status:"NI",estandar:"La instrucción se caracteriza por altas expectativas y prácticas centradas en el alumno.",descriptor:"Los estudiantes participan en actividades, experiencias e interacciones educativas basadas en las necesidades e intereses típicos de la mayoría de los estudiantes. El personal profesional rara vez imparte instrucción diseñada para que los estudiantes alcancen su máximo potencial individual."},
+    {num:22,nivel:2,status:"NI",estandar:"La instrucción se supervisa y se ajusta para avanzar y profundizar el conocimiento y la comprensión del currículo por parte de cada alumno.",descriptor:"El personal profesional a veces supervisa y ajusta la instrucción según el logro de los objetivos de aprendizaje deseados por parte de cada alumno. En ocasiones, analiza los datos para profundizar la comprensión del contenido por parte de cada alumno."},
+    {num:23,nivel:2,status:"NI",estandar:"El personal profesional integra recursos digitales que profundizan y mejoran el compromiso de los estudiantes con la instrucción y estimulan su curiosidad.",descriptor:"En ocasiones, el personal profesional selecciona e integra recursos digitales que enriquecen el proceso de aprendizaje o fomentan la participación activa de los estudiantes. Estos recursos a veces facilitan la búsqueda de intereses y profundizan o amplían los temas del currículo para estimular su curiosidad."},
+  ]},
+  "CRECIMIENTO EN EL APRENDIZAJE":{color:"#ec4899",standards:[
+    {num:24,nivel:null,status:"ND",estandar:"Los líderes utilizan datos y aportes de diversas fuentes para tomar decisiones sobre el crecimiento y el bienestar de los estudiantes y el personal.",descriptor:null},
+    {num:25,nivel:null,status:"ND",estandar:"Los líderes promueven la investigación-acción por parte del personal profesional para mejorar su práctica y avanzar en el aprendizaje.",descriptor:null},
+    {num:26,nivel:2,status:"NI",estandar:"Los líderes evalúan periódicamente los programas de instrucción y las condiciones organizacionales para mejorar la instrucción y avanzar en el aprendizaje.",descriptor:"En ocasiones, los líderes implementan un proceso para determinar la eficacia del currículo y la instrucción de la institución, incluyendo la dotación de personal y los recursos. En ocasiones, utilizan datos y las aportaciones de las partes interesadas para tomar decisiones sobre la conservación, la modificación o la sustitución de programas y prácticas."},
+    {num:27,nivel:2,status:"NI",estandar:"Las necesidades académicas y no académicas de los estudiantes se identifican y se abordan eficazmente mediante intervenciones apropiadas.",descriptor:"La institución atiende ocasionalmente diversas necesidades de desarrollo, físicas, emocionales e intelectuales para apoyar el aprendizaje de los estudiantes. En ocasiones, se planifican e implementan estrategias e intervenciones para estas necesidades con base en información, datos y buenas prácticas pedagógicas para garantizar el éxito de los estudiantes."},
+    {num:28,nivel:2,status:"NI",estandar:"Los estudiantes persiguen objetivos individuales, incluida la adquisición de habilidades académicas y no académicas importantes para su futuro educativo y sus carreras.",descriptor:"El personal profesional a veces interactúa con los estudiantes para ayudarlos a reconocer sus talentos y potencial, e identificar metas significativas y alcanzables que fomenten sus habilidades académicas, profesionales, personales y sociales. En ocasiones, los estudiantes eligen actividades y supervisan su propio progreso, demostrando un compromiso activo con las metas establecidas."},
+    {num:29,nivel:1,status:"NI",estandar:"Comprender las necesidades e intereses de los estudiantes impulsa el diseño, la entrega, la aplicación y la evaluación del aprendizaje profesional.",descriptor:"El aprendizaje profesional rara vez se centra en el alumno y puede o no centrarse en mejorar las habilidades y conocimientos pedagógicos para abordar mejor sus necesidades e intereses. No existe un proceso documentado para seleccionar, impartir, implementar y evaluar el aprendizaje profesional."},
+    {num:30,nivel:null,status:"ND",estandar:"El progreso de los estudiantes se mide a través de un sistema equilibrado que incluye la evaluación tanto del aprendizaje como para el aprendizaje.",descriptor:null},
+    {num:31,nivel:2,status:"NI",estandar:"Los estudiantes demuestran crecimiento en su desempeño académico basado en evaluaciones válidas y confiables.",descriptor:"La institución ocasionalmente mantiene altos niveles de desempeño estudiantil a lo largo del tiempo o muestra tendencias de mejora en áreas de bajo rendimiento. En ocasiones, monitorea los resultados de múltiples evaluaciones del aprendizaje estudiantil e implementa planes para abordar las áreas de bajo rendimiento. Ocasionalmente, comunica los resultados y los planes para mejorar el desempeño estudiantil a las partes interesadas."},
+  ]}
+};
+
+let openPanel = null;
+
+
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-error');
+  if (user === 'ColegioCafam' && pass === 'Cafam2025*.*') {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('main-content').classList.add('visible');
+  } else {
+    err.classList.add('show');
+    setTimeout(() => err.classList.remove('show'), 3000);
+    document.getElementById('login-pass').value = '';
+  }
+}
+
+function toggleDetail(num) {
+  const panel = document.getElementById('panel-'+num);
+  const row   = document.getElementById('row-'+num);
+  if (!panel) return;
+  if (openPanel && openPanel !== panel) {
+    openPanel.classList.remove('open');
+    const prevRow = document.getElementById('row-'+openPanel.dataset.num);
+    if (prevRow) prevRow.classList.remove('active');
+  }
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  row.classList.toggle('active', !isOpen);
+  openPanel = isOpen ? null : panel;
+  if (!isOpen) setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),80);
+}
+
+function scrollToStd(num) {
+  const row = document.getElementById('row-'+num);
+  if (!row) return;
+  row.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>toggleDetail(num),420);
+}
+
+function buildHeatmap() {
+  const container = document.getElementById('heatmap');
+  Object.entries(DATA).forEach(([catName,cat])=>{
+    const vals = cat.standards.filter(s=>s.nivel!==null).map(s=>s.nivel);
+    const avg  = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+    const div  = document.createElement('div');
+    div.className = 'heatmap-cat';
+    div.innerHTML = `
+      <div class="heatmap-cat-name" style="color:${cat.color}">${catName}</div>
+      <div class="heatmap-dots">
+        ${cat.standards.map(s=>`
+          <div class="heatmap-dot" data-nivel="${s.nivel!==null?s.nivel:'nd'}"
+               title="${s.nivel!==null?'E'+s.num+': '+nivelLabel[s.nivel]:'E'+s.num+': Sin datos'}"
+               onclick="${s.nivel!==null?'scrollToStd('+s.num+')':''}">
+            ${s.num}
+          </div>`).join('')}
+      </div>
+      <div class="cat-avg-bar"><div class="cat-avg-fill" style="background:${cat.color}" data-pct="${(avg/4)*100}"></div></div>
+      <div class="cat-avg-label">Promedio: ${avg?avg.toFixed(1):'S/D'} / 4</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function buildCategories() {
+  const container = document.getElementById('categories');
+  let delay = 0;
+  Object.entries(DATA).forEach(([catName,cat])=>{
+    const vals = cat.standards.filter(s=>s.nivel!==null).map(s=>s.nivel);
+    const avg  = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+    const block = document.createElement('div');
+    block.className = 'category-block';
+    block.style.animationDelay = delay+'ms';
+    delay += 100;
+
+    const rows = cat.standards.map(s=>{
+      const n = s.nivel;
+      const color = n ? nivelColor[n] : '#7d8590';
+      const pct   = n ? (n/4*100) : 0;
+      const pillC = s.status==='S'?'pill-s':s.status==='NI'?'pill-ni':'pill-nd';
+      const pillT = s.status==='ND'?'S/D':s.status;
+
+      const detailBody = s.descriptor
+        ? `<div>
+             <div class="detail-lbl">Estándar</div>
+             <div class="detail-estandar">${s.estandar}</div>
+             <div class="detail-lbl">Descriptor del nivel alcanzado &nbsp;—&nbsp; <span style="color:${color}">${nivelLabel[n]}</span></div>
+             <div class="detail-descriptor">${s.descriptor}</div>
+           </div>
+           <div class="detail-badge-big">
+             <div class="detail-nivel-num" style="color:${color}">${n}</div>
+             <div class="detail-nivel-txt" style="color:${color}">${nivelLabel[n]}</div>
+             <div class="detail-status-big ${pillC}">${pillT}</div>
+           </div>`
+        : `<div style="grid-column:1/-1">
+             <div class="detail-lbl">Estándar</div>
+             <div class="detail-estandar">${s.estandar}</div>
+             <div style="color:var(--muted);font-size:12px;font-style:italic;margin-top:8px">Este estándar no tiene nivel ni descriptor registrado en la autoevaluación institucional.</div>
+           </div>`;
+
+      return `
+        <div class="standard-row" id="row-${s.num}" onclick="toggleDetail(${s.num})">
+          <div class="std-num" style="color:${cat.color}">${s.num}</div>
+          <div>
+            <div class="std-label">${s.estandar}</div>
+            <div class="hint">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Clic para ver el descriptor del nivel alcanzado
+            </div>
+          </div>
+          <div class="bar-wrap">
+            <div class="bar-track"><div class="bar-fill" style="background:${color}" data-pct="${pct}"></div></div>
+            <div class="bar-nums">
+              ${[1,2,3,4].map(i=>`<span class="bar-n" style="color:${i===n?color:'var(--border)'}">${i}</span>`).join('')}
+            </div>
+          </div>
+          <div class="nivel-val" style="color:${color}">${n!==null?n:'—'}</div>
+          <div class="status-pill ${pillC}">${pillT}</div>
+        </div>
+        <div class="detail-panel" id="panel-${s.num}" data-num="${s.num}">
+          <div class="detail-inner">${detailBody}</div>
+        </div>`;
+    }).join('');
+
+    block.innerHTML = `
+      <div class="cat-header">
+        <div class="cat-stripe" style="background:${cat.color}"></div>
+        <div class="cat-title">${catName}</div>
+        <div class="cat-meta">Promedio: ${avg?avg.toFixed(1):'S/D'} / 4 &nbsp;·&nbsp; ${cat.standards.length} estándares</div>
+      </div>
+      <div class="standards-list">${rows}</div>`;
+    container.appendChild(block);
+  });
+}
+
+function animateBars() {
+  setTimeout(()=>{
+    document.querySelectorAll('.bar-fill[data-pct]').forEach(el=>{ el.style.width=el.dataset.pct+'%'; });
+    document.querySelectorAll('.cat-avg-fill[data-pct]').forEach(el=>{ el.style.width=el.dataset.pct+'%'; });
+  }, 350);
+}
+
+buildHeatmap();
+buildCategories();
+animateBars();
+</script>
+</div><!-- /main-content -->
+</body>
+</html>
